@@ -22,6 +22,36 @@ import de.blinkt.openvpn.core.OpenVPNThread;
 import de.blinkt.openvpn.core.VpnStatus;
 
 public class VPNHelper extends Activity {
+    public static OnVPNSettingsStatusTempListener settingsStatusTempListener;
+
+    public void setOnVPNSettingsStatusTempListener(OnVPNSettingsStatusTempListener listener) {
+        VPNHelper.settingsStatusTempListener = listener;
+    }
+
+    public void getVpnSettingsStatus() {
+        Intent intent = new Intent(activity, OpenVPNService.class);
+        intent.setAction(OpenVPNService.ACTION_GET_VPN_SETTINGS_STATUS);
+        activity.startService(intent);
+
+        LocalBroadcastManager.getInstance(activity).registerReceiver(vpnStatusReceiver, new IntentFilter(OpenVPNService.ACTION_VPN_SETTINGS_STATUS_RESPONSE));
+    }
+
+    final private BroadcastReceiver vpnStatusReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (OpenVPNService.ACTION_VPN_SETTINGS_STATUS_RESPONSE.equals(intent.getAction())) {
+                Boolean isAlwaysOn = (Boolean) intent.getExtras().get("isAlwaysOn");
+                Boolean isLockdownEnabled = (Boolean) intent.getExtras().get("isLockdownEnabled");
+
+                // Pass the data to the listener or handle as needed
+                if (settingsStatusTempListener != null) {
+                    settingsStatusTempListener.onGotVpnStatus(isAlwaysOn, isLockdownEnabled);
+                }
+                LocalBroadcastManager.getInstance(activity).unregisterReceiver(this);
+            }
+        }
+    };
+
     public Activity activity;
     public static OnVPNStatusChangeListener listener;
     private static String config;
